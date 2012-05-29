@@ -15,15 +15,26 @@ if !exists('g:adb_sh')
 endif
 
 let s:adb_am = 'am start -a '
-let s:adb_input = 'input keyevent '
+let s:adb_keyevent = 'input keyevent '
 
-let s:android_intent = {}
-let s:android_intent['Browser/Google'] = s:adb_am . 'android.intent.action.VIEW -d http://www.google.co.jp'
-let s:android_intent['Key/Enter'] = s:adb_input . '66'
-let s:android_intent['Key/Up'] = s:adb_input . '19'
-let s:android_intent['Key/Down'] = s:adb_input . '20'
-let s:android_intent['Key/Left'] = s:adb_input . '21'
-let s:android_intent['Key/Right'] = s:adb_input . '22'
+let s:android_cmd = g:adb_cmd . g:adb_opt
+let s:android_intent = g:adb_cmd . g:adb_opt . g:adb_sh
+
+let s:android_operation = {}
+let s:android_operation['Browser/Google'] = s:adb_am . 'android.intent.action.VIEW -d http://www.google.co.jp'
+let s:android_operation['Key/Enter'] = s:adb_keyevent . '66'
+let s:android_operation['Key/Up'] = s:adb_keyevent . '19'
+let s:android_operation['Key/Down'] = s:adb_keyevent . '20'
+let s:android_operation['Key/Left'] = s:adb_keyevent . '21'
+let s:android_operation['Key/Right'] = s:adb_keyevent . '22'
+let s:android_operation['Key/Home'] = s:adb_keyevent . '3'
+let s:android_operation['Key/Menu'] = s:adb_keyevent . '82'
+let s:android_operation['Key/Back'] = s:adb_keyevent . '4'
+let s:android_operation['Key/Headsethook'] = s:adb_keyevent . '79'
+let s:android_operation['Setting/Settings'] = s:adb_am . 'android.intent.action.MAIN -n com.android.settings/.Settings'
+let s:android_operation['Setting/Airplane'] = s:adb_am . 'android.settings.AIRPLANE_MODE_SETTINGS'
+let s:android_operation['Dial/117'] = s:adb_am . 'android.intent.action.DIAL -d tel:117'
+let s:android_operation['Reboot'] = 'reboot'
 
 let s:unite_source = {
       \ 'name' : 'adb',
@@ -33,32 +44,31 @@ let s:unite_source = {
 let s:android_command = []
 function! s:unite_source.hooks.on_init(args, context)
     let s:android_command = []
-    let cmd = g:adb_cmd . g:adb_opt . g:adb_sh
 
-    for key in keys(s:android_intent)
+    for key in keys(s:android_operation)
+        let cmd = len(split(key, '/')) == 2 ? s:android_intent : s:android_cmd
         call add(s:android_command, {
               \ 'word' : key,
               \ 'kind' : 'command',
-              \ 'action__command' : 'call system("' . cmd . s:android_intent[key] .'")',
+              \ 'action__command' : 'call system("' . cmd . s:android_operation[key] .'")',
               \ })
     endfor
+
+    if exists('g:android_operation')
+        for key in keys(g:android_operation)
+            let cmd = len(split(key, '/')) == 2 ? s:android_intent : s:android_cmd
+            call add(s:android_command, {
+                  \ 'word' : key,
+                  \ 'kind' : 'command',
+                  \ 'action__command' : 'call system("' . cmd . g:android_operation[key] .'")',
+                  \ })
+        endfor
+    endif
 endfunc
 
 function! s:unite_source.gather_candidates(args, context)
     return s:android_command
 endfunction
-
-" function! s:unite_source.gather_candidates(args, context)
-"     let intents = deepcopy(s:android_intent)
-"     let cmd = g:adb_cmd . g:adb_opt . g:adb_sh . s:adb_am
-"     
-"     return map(intents, '{
-"                 \ "word": v:key,
-"                 \ "source": 'adb/intent',
-"                 \ "kind": ["command"],
-"                 \ "action__command": cmd . v:val
-"                 \ }')
-" endfunction
 
 function! unite#sources#adb#define()
   return s:unite_source
